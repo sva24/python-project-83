@@ -1,9 +1,12 @@
 [tool.poetry]
 name = "hexlet-code"
 version = "0.1.0"
-description = "Page analyzer"
-authors = ["Your Name <you@example.com>"]
+description = "Анализатор страниц"
+authors = ["Владимир Силин <sva@itx24.ru>"]
 readme = "README.md"
+packages = [
+  { include = "app" },
+]
 
 [tool.poetry.dependencies]
 python = "^3.10"
