@@ -5,7 +5,7 @@ description = "Анализатор страниц"
 authors = ["Владимир Силин <sva@itx24.ru>"]
 readme = "README.md"
 packages = [
-  { include = "app" },
+  { include = "page_analyzer" },
 ]
 
 [tool.poetry.dependencies]
