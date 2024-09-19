@@ -4,9 +4,7 @@ version = "0.1.0"
 description = "Анализатор страниц"
 authors = ["Владимир Силин <sva@itx24.ru>"]
 readme = "README.md"
-packages = [
-  { include = "page_analyzer" },
-]
+packages = [{ include = "page_analyzer" }]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<4.0"
