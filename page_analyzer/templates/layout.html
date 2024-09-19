@@ -10,14 +10,14 @@
 <body class="min-vh-100 d-flex flex-column">
 
   {% include 'navbar.html' %}
+  {% include 'flash_messages.html' %}
 
   <main class="flex-grow-1">
     <div class="container-lg mt-3">
 
-      {% include 'flash_messages.html' %}
+
 
       {% block content %}{% endblock %}
-
     </div>
   </main>
 

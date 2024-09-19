@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import psycopg2
 from .validator import validate
 from .normalizer import normalize
+from .check import check_page
 from flask import (
     get_flashed_messages,
     flash,
@@ -52,13 +53,35 @@ def post_url():
 
 @app.route('/urls/<id>', methods=['GET'])
 def get_url(id):
+    messages = get_flashed_messages(with_categories=True)
+    print(messages)
     url = repo.find(id)
+    checks = repo.get_checks_for_url(id)
+    if checks is None:
+        checks = {}
     if url is None:
         return render_template('error.html')
-    return render_template('show.html', url=url)
+    return render_template(
+        'show.html',
+        url=url,
+        checks=checks,
+        messages=messages)
 
 
 @app.route('/urls', methods=['GET'])
 def show_urls():
     data = repo.get_content()
     return render_template('urls.html', urls=data)
+
+
+@app.route('/urls/<id>/checks', methods=['POST'])
+def run_checks(id):
+    url = repo.find(id)
+    data = check_page(url['name'])
+    if data is None:
+        flash('Произошла ошибка при проверке', 'danger')
+        return redirect(url_for('get_url', id=id))
+    else:
+        repo.save_checks(id, data)
+        flash('Страница успешно проверена', 'success')
+        return redirect(url_for('get_url', id=id))

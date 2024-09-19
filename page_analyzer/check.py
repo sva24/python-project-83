@@ -1,0 +1,27 @@
+import requests
+from bs4 import BeautifulSoup
+
+
+def check_page(url):
+    session = requests.Session()
+    try:
+        response = session.get(url, timeout=5)
+    except requests.exceptions.Timeout:
+        return None
+    except requests.ConnectionError:
+        return None
+    if response.status_code != 200:
+        return None
+    else:
+        soup = BeautifulSoup(response.content, 'html.parser')
+        h1 = soup.title.h1 if soup.title.h1 else ''
+        title = soup.title.string if soup.title.string else ''
+        descrip_tag = soup.find('meta', {'name': 'description'})
+        description = descrip_tag.get('content') if descrip_tag else None
+        url_check = {
+            'status_code': response.status_code,
+            'h1': h1,
+            'title': title,
+            'description': description
+        }
+    return url_check
