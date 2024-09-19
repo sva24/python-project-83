@@ -74,18 +74,21 @@ class UrlsRepository:
             int | None: Возвращает идентификатор сохраненного URL,
             если успешное сохранение, иначе возвращает None.
         """
-        try:
-            with self.conn.cursor() as cur:
-                cur.execute(
-                    "INSERT INTO urls (name) VALUES (%s) RETURNING id",
-                    (url['url'],)
-                )
-                url_id = cur.fetchone()[0]
-                self.conn.commit()
-                return url_id
-        except Exception:
-            self.conn.rollback()
-            return None
+        with self.conn.cursor() as cur:
+
+            cur.execute("SELECT id FROM urls WHERE name = %s", (url['url'],))
+            existing_name = cur.fetchone()
+
+            if existing_name:
+                return None
+
+            cur.execute(
+                "INSERT INTO urls (name) VALUES (%s) RETURNING id",
+                (url['url'],)
+            )
+            url_id = cur.fetchone()[0]
+            self.conn.commit()
+            return url_id
 
     def save_checks(self, id: int, check_result: dict) -> None:
         """Сохраняет результаты проверки для указанного URL.
