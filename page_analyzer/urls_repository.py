@@ -20,6 +20,11 @@ class UrlsRepository:
         """
         self.conn = conn
 
+    def __del__(self):
+        """Закрывает соединение при уничтожении объекта."""
+        if self.conn:
+            self.conn.close()
+
     def get_content(self):
         """Получает все URL из базы данных.
 
