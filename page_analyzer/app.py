@@ -29,12 +29,23 @@ repo = UrlsRepository(conn)
 
 @app.route('/')
 def get_index():
+    """Отображает главную страницу.
+
+    Returns:
+        Рендеринг шаблона 'index.html'.
+    """
     messages = get_flashed_messages(with_categories=True)
     return render_template('index.html', messages=messages)
 
 
 @app.route('/urls', methods=['POST'])
 def post_url():
+    """Обрабатывает POST-запрос для добавления нового URL.
+
+    Returns:
+        Перенаправляет на страницу добавленного URL
+        или на главную страницу в случае ошибки.
+    """
     data = request.form.to_dict()
     errors = validate(data)
 
@@ -56,8 +67,17 @@ def post_url():
 
 @app.route('/urls/<id>', methods=['GET'])
 def get_url(id):
+    """Отображает страницу с информацией об URL.
+
+    Args:
+        id (int): Идентификатор URL.
+
+    Returns:
+        Рендерит шаблон 'show.html' с данными о URL и
+        результатами проверок или шаблон 'error.html' в случае
+        ошибки.
+    """
     messages = get_flashed_messages(with_categories=True)
-    print(messages)
     url = repo.find(id)
     checks = repo.get_checks_for_url(id)
     if checks is None:
@@ -73,12 +93,25 @@ def get_url(id):
 
 @app.route('/urls', methods=['GET'])
 def show_urls():
+    """Отображает список всех сохраненных URL.
+
+       Returns:
+        Рендерит шаблон 'urls.html' со списком URL.
+    """
     data = repo.get_content()
     return render_template('urls.html', urls=data)
 
 
 @app.route('/urls/<id>/checks', methods=['POST'])
 def run_checks(id):
+    """Запускает проверку указанного URL.
+
+    Args:
+        id (int): Идентификатор URL.
+
+    Returns:
+       Отображает сообщения о результате проверки.
+    """
     url = repo.find(id)
     data = check_page(url['name'])
     if data is None:

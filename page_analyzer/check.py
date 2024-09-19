@@ -2,7 +2,18 @@ import requests
 from bs4 import BeautifulSoup
 
 
-def check_page(url):
+def check_page(url) -> dict | None:
+    """Проверяет доступность веб-страницы и извлекает метаданные.
+
+    Args:
+        url (str): URL-адрес веб-страницы для проверки.
+
+    Returns:
+        dict или None: Возвращает словарь с метаданными страницы,
+        включая статус-код, заголовок H1, заголовок страницы и
+        мета-описание, если запрос успешен. Если запрос неуспешен,
+        возвращает None.
+    """
     session = requests.Session()
     try:
         response = session.get(url, timeout=5)
