@@ -58,10 +58,12 @@ def post_url():
 
         if url_id is not None:
             flash('Страница успешно добавлена', 'success')
+            repo.close()
             return redirect(url_for('get_url', id=url_id))
 
         existing_url_id = repo.get_id_url(normalize(data))
         flash('Страница уже существует', 'info')
+        repo.close()
         return redirect(url_for('get_url', id=existing_url_id))
 
 
@@ -83,7 +85,9 @@ def get_url(id):
     if checks is None:
         checks = {}
     if url is None:
+        repo.close()
         return render_template('error.html')
+    repo.close()
     return render_template(
         'show.html',
         url=url,
@@ -99,6 +103,7 @@ def show_urls():
         Рендерит шаблон 'urls.html' со списком URL.
     """
     data = repo.get_content()
+    repo.close()
     return render_template('urls.html', urls=data)
 
 
@@ -115,9 +120,11 @@ def run_checks(id):
     url = repo.find(id)
     data = check_page(url['name'])
     if data is None:
+        repo.close()
         flash('Произошла ошибка при проверке', 'danger')
         return redirect(url_for('get_url', id=id))
     else:
         repo.save_checks(id, data)
+        repo.close()
         flash('Страница успешно проверена', 'success')
         return redirect(url_for('get_url', id=id))

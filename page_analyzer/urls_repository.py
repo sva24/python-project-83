@@ -20,8 +20,8 @@ class UrlsRepository:
         """
         self.conn = conn
 
-    def __del__(self):
-        """Закрывает соединение при уничтожении объекта."""
+    def close(self):
+        """Закрывает соединение с базой данных."""
         if self.conn:
             self.conn.close()
 
