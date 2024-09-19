@@ -1,9 +1,12 @@
 import os
 from dotenv import load_dotenv
 import psycopg2
+
 from .validator import validate
 from .normalizer import normalize
 from .check import check_page
+from .urls_repository import UrlsRepository
+
 from flask import (
     get_flashed_messages,
     flash,
@@ -13,7 +16,7 @@ from flask import (
     request,
     url_for
 )
-from .urls_repository import UrlsRepository
+
 
 load_dotenv()
 app = Flask(__name__)
