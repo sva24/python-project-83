@@ -16,9 +16,7 @@ def check_page(url) -> dict | None:
     """
     session = requests.Session()
     try:
-        response = session.get(url, timeout=1)
-    except requests.exceptions.Timeout:
-        return None
+        response = session.get(url)
     except requests.ConnectionError:
         return None
     if response.status_code != 200:
