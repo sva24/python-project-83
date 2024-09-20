@@ -25,7 +25,7 @@ def check_page(url) -> dict | None:
         return None
     else:
         soup = BeautifulSoup(response.content, 'html.parser')
-        h1 = soup.title.h1 if soup.title.h1 else ''
+        h1 = soup.find('h1').text if soup.find('h1') else ''
         title = soup.title.string if soup.title.string else ''
         descrip_tag = soup.find('meta', {'name': 'description'})
         description = descrip_tag.get('content') if descrip_tag else None
