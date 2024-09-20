@@ -93,7 +93,7 @@ def show_urls():
        Returns:
         Рендерит шаблон 'urls.html' со списком URL.
     """
-    data = repo.get_content()
+    data = repo.get_all_urls()
     return render_template('urls.html', urls=data)
 
 

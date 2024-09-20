@@ -21,19 +21,30 @@ class UrlsRepository:
         """
         return connect(self.db_url)
 
-    def get_content(self):
-        """Получает все URL из базы данных.
+    def get_all_urls(self):
+        """Получает все URL и их последние проверки из базы данных.
 
         Returns:
             list: Список словарей, каждый из которых представляет
-            строку из таблицы URLs, отсортированные по убыванию id.
+            строку из таблицы URLs и данные последних проверок,
+            отсортированные по убыванию id.
         """
         conn = self.get_connection()
-        if conn is None:
-            return []
-
         with conn.cursor(cursor_factory=DictCursor) as cur:
-            cur.execute("SELECT * FROM urls ORDER BY id DESC")
+            cur.execute("""
+                SELECT urls.id, urls.name, urls.created_at,
+                       url_checks.status_code AS response_code,
+                       url_checks.created_at AS last_checked
+                FROM urls
+                LEFT JOIN url_checks
+                ON urls.id = url_checks.url_id
+                AND url_checks.created_at = (
+                    SELECT MAX(created_at)
+                    FROM url_checks
+                    WHERE url_checks.url_id = urls.id
+                )
+                ORDER BY urls.id DESC
+            """)
             rows = [dict(row) for row in cur]
         conn.close()
         return rows
@@ -49,9 +60,6 @@ class UrlsRepository:
             найдено, иначе возвращает None.
         """
         conn = self.get_connection()
-        if conn is None:
-            return None
-
         with conn.cursor(cursor_factory=DictCursor) as cur:
             cur.execute("SELECT * FROM urls WHERE id = %s", (id,))
             row = cur.fetchone()
@@ -69,9 +77,6 @@ class UrlsRepository:
             иначе возвращает None.
         """
         conn = self.get_connection()
-        if conn is None:
-            return None
-
         with conn.cursor(cursor_factory=DictCursor) as cur:
             cur.execute("SELECT id FROM urls WHERE name = %s", (url['url'],))
             row = cur.fetchone()
@@ -89,9 +94,6 @@ class UrlsRepository:
             если успешное сохранение, иначе возвращает None.
         """
         conn = self.get_connection()
-        if conn is None:
-            return None
-
         with conn.cursor() as cur:
             cur.execute("SELECT id FROM urls WHERE name = %s", (url['url'],))
             existing_name = cur.fetchone()
@@ -121,9 +123,6 @@ class UrlsRepository:
             и функция возвращает None.
         """
         conn = self.get_connection()
-        if conn is None:
-            return
-
         with conn.cursor() as cur:
             cur.execute(
                 """INSERT INTO
@@ -147,9 +146,6 @@ class UrlsRepository:
             проверок для данного URL или None, если проверки не найдены.
         """
         conn = self.get_connection()
-        if conn is None:
-            return None
-
         with conn.cursor(cursor_factory=DictCursor) as cur:
             cur.execute("""SELECT
                                 id,
