@@ -1,14 +1,14 @@
 from urllib.parse import urlparse
 
 
-def normalize(url: str) -> str:
+def normalize(url: dict) -> dict:
     """Нормализует URL, преобразуя его в нижний регистр.
 
     Args:
-        url (str): Не нормализованный URL-адрес.
+        url (dict): Не нормализованный URL-адрес.
 
     Returns:
-        str: Нормализованный URL в формате 'scheme://netloc',
+        dict: Нормализованный URL в формате 'scheme://netloc',
         где 'scheme' и 'netloc' приведены к нижнему регистру.
     """
     parsed_url = {}

@@ -20,11 +20,6 @@ class UrlsRepository:
         """
         self.conn = conn
 
-    def close(self):
-        """Закрывает соединение с базой данных."""
-        if self.conn:
-            self.conn.close()
-
     def get_content(self):
         """Получает все URL из базы данных.
 
@@ -32,10 +27,10 @@ class UrlsRepository:
             list: Список словарей, каждый из которых представляет
             строку из таблицы URLs, отсортированные по убыванию id
         """
-
-        with self.conn.cursor(cursor_factory=DictCursor) as cur:
-            cur.execute("SELECT * FROM urls ORDER BY id DESC")
-            return [dict(row) for row in cur]
+        with self.conn as conn:
+            with self.conn.cursor(cursor_factory=DictCursor) as cur:
+                cur.execute("SELECT * FROM urls ORDER BY id DESC")
+                return [dict(row) for row in cur]
 
     def find(self, id: int) -> dict | None:
         """Находит URL по идентификатору.
@@ -47,13 +42,13 @@ class UrlsRepository:
             dict | None: Возвращает словарь с данными URL, если
             найдено, иначе возвращает None.
         """
+        with self.conn as conn:
+            with self.conn.cursor(cursor_factory=DictCursor) as cur:
+                cur.execute("SELECT * FROM urls WHERE id = %s", (id,))
+                row = cur.fetchone()
+                return dict(row) if row else None
 
-        with self.conn.cursor(cursor_factory=DictCursor) as cur:
-            cur.execute("SELECT * FROM urls WHERE id = %s", (id,))
-            row = cur.fetchone()
-            return dict(row) if row else None
-
-    def get_id_url(self, url):
+    def get_url_id(self, url):
         """Получает идентификатор URL по его имени.
 
         Args:
@@ -63,11 +58,11 @@ class UrlsRepository:
             int | None: Возвращает идентификатор URL, если найден,
             иначе возвращает None.
         """
-
-        with self.conn.cursor(cursor_factory=DictCursor) as cur:
-            cur.execute("SELECT id FROM urls WHERE name = %s", (url['url'],))
-            row = cur.fetchone()
-            return row['id'] if row else None
+        with self.conn as conn:
+            with self.conn.cursor(cursor_factory=DictCursor) as cur:
+                cur.execute("SELECT id FROM urls WHERE name = %s", (url['url'],))
+                row = cur.fetchone()
+                return row['id'] if row else None
 
     def save(self, url: dict) -> int | None:
         """Сохраняет новый URL в базе данных.
@@ -79,21 +74,22 @@ class UrlsRepository:
             int | None: Возвращает идентификатор сохраненного URL,
             если успешное сохранение, иначе возвращает None.
         """
-        with self.conn.cursor() as cur:
+        with self.conn as conn:
+            with self.conn.cursor() as cur:
 
-            cur.execute("SELECT id FROM urls WHERE name = %s", (url['url'],))
-            existing_name = cur.fetchone()
+                cur.execute("SELECT id FROM urls WHERE name = %s", (url['url'],))
+                existing_name = cur.fetchone()
 
-            if existing_name:
-                return None
+                if existing_name:
+                    return None
 
-            cur.execute(
-                "INSERT INTO urls (name) VALUES (%s) RETURNING id",
-                (url['url'],)
-            )
-            url_id = cur.fetchone()[0]
-            self.conn.commit()
-            return url_id
+                cur.execute(
+                    "INSERT INTO urls (name) VALUES (%s) RETURNING id",
+                    (url['url'],)
+                )
+                url_id = cur.fetchone()[0]
+                self.conn.commit()
+                return url_id
 
     def save_checks(self, id: int, check_result: dict) -> None:
         """Сохраняет результаты проверки для указанного URL.
@@ -108,16 +104,17 @@ class UrlsRepository:
             и функция возвращает None
         """
         try:
-            with self.conn.cursor() as cur:
-                cur.execute(
-                    """INSERT INTO
-                     url_checks (url_id, status_code, h1, title, description)
-                       VALUES (%s, %s, %s, %s, %s)""",
-                    (id, check_result['status_code'],
-                     check_result['h1'], check_result['title'],
-                     check_result['description'])
-                )
-                self.conn.commit()
+            with self.conn as conn:
+                with self.conn.cursor() as cur:
+                    cur.execute(
+                        """INSERT INTO
+                         url_checks (url_id, status_code, h1, title, description)
+                           VALUES (%s, %s, %s, %s, %s)""",
+                        (id, check_result['status_code'],
+                         check_result['h1'], check_result['title'],
+                         check_result['description'])
+                    )
+                    self.conn.commit()
         except Exception:
             return None
 
@@ -131,16 +128,17 @@ class UrlsRepository:
             list | None: Возвращает список словарей с результатами
             проверок для данного URL или None, если проверки не найдены.
         """
-        with self.conn.cursor(cursor_factory=DictCursor) as cur:
-            cur.execute("""SELECT
-                                id,
-                                status_code,
-                                h1,
-                                title,
-                                description,
-                                created_at
-                            FROM url_checks
-                            WHERE url_id = %s
-                             ORDER BY id DESC""", (id,))
-            rows = cur.fetchall()
-            return rows if rows else None
+        with self.conn as conn:
+            with self.conn.cursor(cursor_factory=DictCursor) as cur:
+                cur.execute("""SELECT
+                                    id,
+                                    status_code,
+                                    h1,
+                                    title,
+                                    description,
+                                    created_at
+                                FROM url_checks
+                                WHERE url_id = %s
+                                 ORDER BY id DESC""", (id,))
+                rows = cur.fetchall()
+                return rows if rows else None
