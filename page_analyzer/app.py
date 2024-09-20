@@ -1,6 +1,5 @@
 import os
 from dotenv import load_dotenv
-import psycopg2
 
 from .validator import validate
 from .normalizer import normalize
@@ -17,14 +16,12 @@ from flask import (
     url_for
 )
 
-
 load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['DATABASE_URL'] = os.getenv('DATABASE_URL')
 
-conn = psycopg2.connect(app.config['DATABASE_URL'])
-repo = UrlsRepository(conn)
+repo = UrlsRepository(app.config['DATABASE_URL'])
 
 
 @app.route('/')
@@ -51,11 +48,9 @@ def post_url():
 
     if errors:
         flash(errors, 'danger')
-        return redirect(url_for('get_index'))
+        return render_template('index.html'), 422
     else:
-
         url_id = repo.save(normalize(data))
-
         if url_id is not None:
             flash('Страница успешно добавлена', 'success')
             return redirect(url_for('get_url', id=url_id))

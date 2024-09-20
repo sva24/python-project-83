@@ -1,36 +1,42 @@
+from psycopg2 import connect
 from psycopg2.extras import DictCursor
 
 
 class UrlsRepository:
-    """Класс для работы с репозиторием URL.
+    """Класс для работы с репозиторием URL."""
 
-    Класс предоставляет методы для взаимодействия с
-    базой данных, включая получение, сохранение и поиск URL,
-    а также сохранение результатов проверок.
-
-    Attributes:
-        conn: Объект подключения к базе данных.
-    """
-
-    def __init__(self, conn):
-        """Инициализирует UrlsRepository с подключением к базе данных.
+    def __init__(self, db_url):
+        """Инициализирует UrlsRepository с URL базы данных.
 
         Args:
+            db_url: Строка подключения к базе данных.
+        """
+        self.db_url = db_url
+
+    def get_connection(self):
+        """Получает соединение с базой данных.
+
+        Returns:
             conn: Объект подключения к базе данных.
         """
-        self.conn = conn
+        return connect(self.db_url)
 
     def get_content(self):
         """Получает все URL из базы данных.
 
         Returns:
             list: Список словарей, каждый из которых представляет
-            строку из таблицы URLs, отсортированные по убыванию id
+            строку из таблицы URLs, отсортированные по убыванию id.
         """
-        with self.conn as conn:
-            with self.conn.cursor(cursor_factory=DictCursor) as cur:
-                cur.execute("SELECT * FROM urls ORDER BY id DESC")
-                return [dict(row) for row in cur]
+        conn = self.get_connection()
+        if conn is None:
+            return []
+
+        with conn.cursor(cursor_factory=DictCursor) as cur:
+            cur.execute("SELECT * FROM urls ORDER BY id DESC")
+            rows = [dict(row) for row in cur]
+        conn.close()
+        return rows
 
     def find(self, id: int) -> dict | None:
         """Находит URL по идентификатору.
@@ -42,27 +48,35 @@ class UrlsRepository:
             dict | None: Возвращает словарь с данными URL, если
             найдено, иначе возвращает None.
         """
-        with self.conn as conn:
-            with self.conn.cursor(cursor_factory=DictCursor) as cur:
-                cur.execute("SELECT * FROM urls WHERE id = %s", (id,))
-                row = cur.fetchone()
-                return dict(row) if row else None
+        conn = self.get_connection()
+        if conn is None:
+            return None
+
+        with conn.cursor(cursor_factory=DictCursor) as cur:
+            cur.execute("SELECT * FROM urls WHERE id = %s", (id,))
+            row = cur.fetchone()
+        conn.close()
+        return dict(row) if row else None
 
     def get_url_id(self, url):
         """Получает идентификатор URL по его имени.
 
         Args:
-            url (dict): Словарь, содержащий ключ URL.
+            url (dict): Словарь, содержащий идентификатор URL
 
         Returns:
             int | None: Возвращает идентификатор URL, если найден,
             иначе возвращает None.
         """
-        with self.conn as conn:
-            with self.conn.cursor(cursor_factory=DictCursor) as cur:
-                cur.execute("SELECT id FROM urls WHERE name = %s", (url['url'],))
-                row = cur.fetchone()
-                return row['id'] if row else None
+        conn = self.get_connection()
+        if conn is None:
+            return None
+
+        with conn.cursor(cursor_factory=DictCursor) as cur:
+            cur.execute("SELECT id FROM urls WHERE name = %s", (url['url'],))
+            row = cur.fetchone()
+        conn.close()
+        return row['id'] if row else None
 
     def save(self, url: dict) -> int | None:
         """Сохраняет новый URL в базе данных.
@@ -74,22 +88,25 @@ class UrlsRepository:
             int | None: Возвращает идентификатор сохраненного URL,
             если успешное сохранение, иначе возвращает None.
         """
-        with self.conn as conn:
-            with self.conn.cursor() as cur:
+        conn = self.get_connection()
+        if conn is None:
+            return None
 
-                cur.execute("SELECT id FROM urls WHERE name = %s", (url['url'],))
-                existing_name = cur.fetchone()
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM urls WHERE name = %s", (url['url'],))
+            existing_name = cur.fetchone()
 
-                if existing_name:
-                    return None
+            if existing_name:
+                return None
 
-                cur.execute(
-                    "INSERT INTO urls (name) VALUES (%s) RETURNING id",
-                    (url['url'],)
-                )
-                url_id = cur.fetchone()[0]
-                self.conn.commit()
-                return url_id
+            cur.execute(
+                "INSERT INTO urls (name) VALUES (%s) RETURNING id",
+                (url['url'],)
+            )
+            url_id = cur.fetchone()[0]
+            conn.commit()
+        conn.close()
+        return url_id
 
     def save_checks(self, id: int, check_result: dict) -> None:
         """Сохраняет результаты проверки для указанного URL.
@@ -101,22 +118,23 @@ class UrlsRepository:
 
         Returns:
             None: В случае ошибки происходит откат транзакции
-            и функция возвращает None
+            и функция возвращает None.
         """
-        try:
-            with self.conn as conn:
-                with self.conn.cursor() as cur:
-                    cur.execute(
-                        """INSERT INTO
-                         url_checks (url_id, status_code, h1, title, description)
-                           VALUES (%s, %s, %s, %s, %s)""",
-                        (id, check_result['status_code'],
-                         check_result['h1'], check_result['title'],
-                         check_result['description'])
-                    )
-                    self.conn.commit()
-        except Exception:
-            return None
+        conn = self.get_connection()
+        if conn is None:
+            return
+
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO
+                 url_checks (url_id, status_code, h1, title, description)
+                   VALUES (%s, %s, %s, %s, %s)""",
+                (id, check_result['status_code'],
+                 check_result['h1'], check_result['title'],
+                 check_result['description'])
+            )
+            conn.commit()
+        conn.close()
 
     def get_checks_for_url(self, id: int) -> list | None:
         """Получает результаты проверок для указанного URL.
@@ -128,17 +146,21 @@ class UrlsRepository:
             list | None: Возвращает список словарей с результатами
             проверок для данного URL или None, если проверки не найдены.
         """
-        with self.conn as conn:
-            with self.conn.cursor(cursor_factory=DictCursor) as cur:
-                cur.execute("""SELECT
-                                    id,
-                                    status_code,
-                                    h1,
-                                    title,
-                                    description,
-                                    created_at
-                                FROM url_checks
-                                WHERE url_id = %s
-                                 ORDER BY id DESC""", (id,))
-                rows = cur.fetchall()
-                return rows if rows else None
+        conn = self.get_connection()
+        if conn is None:
+            return None
+
+        with conn.cursor(cursor_factory=DictCursor) as cur:
+            cur.execute("""SELECT
+                                id,
+                                status_code,
+                                h1,
+                                title,
+                                description,
+                                created_at
+                            FROM url_checks
+                            WHERE url_id = %s
+                             ORDER BY id DESC""", (id,))
+            rows = cur.fetchall()
+        conn.close()
+        return rows if rows else None
