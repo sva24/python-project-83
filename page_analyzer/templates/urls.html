@@ -21,7 +21,7 @@
           </a>
         </td>
         <td>{{ url.last_checked.strftime('%Y-%m-%d') if url.last_checked else '' }}</td>
-        <td>{{ url.response_code if url.response_code else '' }}</td>
+        <td>{{ url.status_code if url.status_code else '' }}</td>
       </tr>
       {% endfor %}
     </tbody>

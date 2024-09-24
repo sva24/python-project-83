@@ -1,10 +1,11 @@
-import os
-from dotenv import load_dotenv
-
-from .validator import validate
-from .normalizer import normalize
 from .check import check_page
-from .urls_repository import UrlsRepository
+
+from .config import SECRET_KEY, DATABASE_URL
+
+from .db import DbConnection
+from .validator import UrlValidator, UrlNormalizer
+from .repository import UrlsRepository
+from .models import Url
 
 from flask import (
     get_flashed_messages,
@@ -16,12 +17,15 @@ from flask import (
     url_for
 )
 
-load_dotenv()
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-app.config['DATABASE_URL'] = os.getenv('DATABASE_URL')
+app.config['SECRET_KEY'] = SECRET_KEY
+app.config['DATABASE_URL'] = DATABASE_URL
 
-repo = UrlsRepository(app.config['DATABASE_URL'])
+url_validator = UrlValidator()
+url_normalizer = UrlNormalizer()
+db_connection = DbConnection(app.config['DATABASE_URL'])
+
+repo = UrlsRepository(db_connection, url_validator, url_normalizer)
 
 
 @app.route('/')
@@ -37,27 +41,24 @@ def get_index():
 
 @app.route('/urls', methods=['POST'])
 def post_url():
-    """Обрабатывает POST-запрос для добавления нового URL.
-
-    Returns:
-        Перенаправляет на страницу добавленного URL
-        или на главную страницу в случае ошибки.
-    """
+    """Обрабатывает POST-запрос для добавления нового URL."""
     data = request.form.to_dict()
-    errors = validate(data)
+    url = data['url']
+
+    url_to_save = Url(name=url)
+    url_id, errors = repo.save(url_to_save)
 
     if errors:
         flash(errors, 'danger')
         return render_template('index.html'), 422
-    else:
-        url_id = repo.save(normalize(data))
-        if url_id is not None:
-            flash('Страница успешно добавлена', 'success')
-            return redirect(url_for('get_url', id=url_id))
 
-        existing_url_id = repo.get_url_id(normalize(data))
-        flash('Страница уже существует', 'info')
-        return redirect(url_for('get_url', id=existing_url_id))
+    if url_id is not None:
+        flash('Страница успешно добавлена', 'success')
+        return redirect(url_for('get_url', id=url_id))
+
+    existing_url_id = repo.get_url_id(url)
+    flash('Страница уже существует', 'info')
+    return redirect(url_for('get_url', id=existing_url_id))
 
 
 @app.route('/urls/<id>', methods=['GET'])
@@ -108,11 +109,15 @@ def run_checks(id):
        Отображает сообщения о результате проверки.
     """
     url = repo.find(id)
-    data = check_page(url['name'])
+    if url is None:
+        flash('Некорректный URL', 'danger')
+        return redirect(url_for('show_urls'))
+
+    data = check_page(url.name)
     if data is None:
         flash('Произошла ошибка при проверке', 'danger')
         return redirect(url_for('get_url', id=id))
-    else:
-        repo.save_checks(id, data)
-        flash('Страница успешно проверена', 'success')
-        return redirect(url_for('get_url', id=id))
+
+    repo.save_checks(id, data)
+    flash('Страница успешно проверена', 'success')
+    return redirect(url_for('get_url', id=id))
