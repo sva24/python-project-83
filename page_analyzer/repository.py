@@ -93,11 +93,13 @@ class UrlsRepository:
 
         url_normalizer = self.url_normalizer.set_url(url.name)
         normalized_url = url_normalizer.normalize()
-        query = "SELECT id FROM urls WHERE name = %s"
-        existing_name = self.db_connection.fetch_all(query, (normalized_url,))
+
+        existing_name = self.get_url_id(normalized_url)
+
         if existing_name:
             return None, ""
         query = "INSERT INTO urls (name) VALUES (%s) RETURNING id"
+
         rows = self.db_connection.fetch_all(query, (normalized_url,))
         return (rows[0]['id'], "") if rows else (None, "")
 
