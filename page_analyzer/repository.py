@@ -92,7 +92,7 @@ class UrlsRepository:
             int: Возвращает идентификатор сохраненного URL.
 
         Raises:
-            UrlError: Если URL некорректен.
+            WrongUrl: Если URL некорректен.
             UrlInDatabase: Если URL уже существует в базе данных.
         """
 
