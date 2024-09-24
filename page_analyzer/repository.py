@@ -5,6 +5,14 @@ from .validator import UrlValidator, UrlNormalizer
 from .db import DbConnection
 
 
+class UrlInDatabase(Exception):
+    pass
+
+
+class WrongUrl(Exception):
+    pass
+
+
 class UrlsRepository:
     """Класс для работы с репозиторием URL."""
 
@@ -74,34 +82,39 @@ class UrlsRepository:
         rows = self.db_connection.fetch_all(query, (url,))
         return rows[0]['id'] if rows else None
 
-    def save(self, url: Url) -> tuple[int | None, str]:
+    def save(self, url: Url) -> int:
         """Сохраняет новый URL в базе данных.
 
         Args:
             url (Url): Объект Url.
 
         Returns:
-            int | None: Возвращает идентификатор сохраненного URL,
-                        если успешное сохранение, иначе возвращает None
+            int: Возвращает идентификатор сохраненного URL.
+
+        Raises:
+            UrlError: Если URL некорректен.
+            UrlInDatabase: Если URL уже существует в базе данных.
         """
 
         url_validator = self.url_validator.set_url(url.name)
 
         errors = url_validator.validate().get_errors()
         if errors:
-            return None, errors
+            raise WrongUrl(errors)
 
         url_normalizer = self.url_normalizer.set_url(url.name)
         normalized_url = url_normalizer.normalize()
 
         existing_name = self.get_url_id(normalized_url)
-
         if existing_name:
-            return None, ""
+            raise UrlInDatabase("Страница уже существует")
+
         query = "INSERT INTO urls (name) VALUES (%s) RETURNING id"
 
         rows = self.db_connection.fetch_all(query, (normalized_url,))
-        return (rows[0]['id'], "") if rows else (None, "")
+
+        if rows:
+            return rows[0]['id']
 
     def save_checks(self, id: int, check_result: dict) -> None:
         """Сохраняет результаты проверки для указанного URL.

@@ -1,10 +1,10 @@
-from .check import check_page
+from .check import check_page, PageCheckError
 
 from .config import SECRET_KEY, DATABASE_URL
 
 from .db import DbConnection
 from .validator import UrlValidator, UrlNormalizer
-from .repository import UrlsRepository
+from .repository import UrlsRepository, WrongUrl, UrlInDatabase
 from .models import Url
 
 from flask import (
@@ -46,19 +46,20 @@ def post_url():
     url = data['url']
 
     url_to_save = Url(name=url)
-    url_id, errors = repo.save(url_to_save)
 
-    if errors:
-        flash(errors, 'danger')
-        return render_template('index.html'), 422
-
-    if url_id is not None:
+    try:
+        url_id = repo.save(url_to_save)
         flash('Страница успешно добавлена', 'success')
         return redirect(url_for('get_url', id=url_id))
 
-    existing_url_id = repo.get_url_id(url)
-    flash('Страница уже существует', 'info')
-    return redirect(url_for('get_url', id=existing_url_id))
+    except UrlInDatabase as e:
+        existing_url_id = repo.get_url_id(url)
+        flash(str(e), 'info')
+        return redirect(url_for('get_url', id=existing_url_id))
+
+    except WrongUrl as e:
+        flash(str(e), 'danger')
+        return render_template('index.html'), 422
 
 
 @app.route('/urls/<id>', methods=['GET'])
@@ -112,10 +113,10 @@ def run_checks(id):
     if url is None:
         flash('Некорректный URL', 'danger')
         return redirect(url_for('show_urls'))
-
-    data = check_page(url.name)
-    if data is None:
-        flash('Произошла ошибка при проверке', 'danger')
+    try:
+        data = check_page(url.name)
+    except PageCheckError as e:
+        flash(str(e), 'danger')
         return redirect(url_for('get_url', id=id))
 
     repo.save_checks(id, data)
