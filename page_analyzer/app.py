@@ -78,15 +78,15 @@ def get_url(id):
     """
     messages = get_flashed_messages(with_categories=True)
     url = repo.find(id)
-    checks = repo.get_checks_for_url(id)
-    if checks is None:
-        checks = {}
+    data = checks.get_checks_for_url(id)
+    if data is None:
+        data = {}
     if url is None:
         return render_template('error.html')
     return render_template(
         'show.html',
         url=url,
-        checks=checks,
+        checks=data,
         messages=messages)
 
 
