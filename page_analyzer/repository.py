@@ -78,8 +78,10 @@ class UrlsRepository:
             int | None: Возвращает идентификатор URL, если найден,
              иначе возвращает None.
         """
+        url_normalizer = self.url_normalizer.set_url(url)
+        normalized_url = url_normalizer.normalize()
         query = "SELECT id FROM urls WHERE name = %s"
-        rows = self.db_connection.fetch_all(query, (url,))
+        rows = self.db_connection.fetch_all(query, (normalized_url,))
         return rows[0]['id'] if rows else None
 
     def save(self, url: Url) -> int:
