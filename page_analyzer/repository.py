@@ -1,16 +1,7 @@
-from typing import List
 from .models import Url
-
 from .validator import UrlValidator, UrlNormalizer
 from .db import DbConnection
-
-
-class UrlInDatabase(Exception):
-    pass
-
-
-class WrongUrl(Exception):
-    pass
+from .errors import WrongUrl, UrlInDatabase
 
 
 class UrlsRepository:
@@ -31,11 +22,11 @@ class UrlsRepository:
         self.url_validator = url_validator
         self.url_normalizer = url_normalizer
 
-    def get_all_urls(self) -> List[Url]:
+    def get_all_urls(self) -> list[Url]:
         """Получает все URL и их последние проверки из базы данных.
 
         Returns:
-            List[Url]: Список объектов Url с данными из базы.
+            list[Url]: Список объектов Url с данными из базы.
         """
         query = """
             SELECT urls.id, urls.name, urls.created_at,

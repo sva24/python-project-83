@@ -1,11 +1,12 @@
-from .check import check_page, PageCheckError
+from .check import PageCheckError, UrlChecks
 
 from .config import SECRET_KEY, DATABASE_URL
 
 from .db import DbConnection
 from .validator import UrlValidator, UrlNormalizer
-from .repository import UrlsRepository, WrongUrl, UrlInDatabase
+from .repository import UrlsRepository
 from .models import Url
+from .errors import WrongUrl, UrlInDatabase
 
 from flask import (
     get_flashed_messages,
@@ -26,6 +27,7 @@ url_normalizer = UrlNormalizer()
 db_connection = DbConnection(app.config['DATABASE_URL'])
 
 repo = UrlsRepository(db_connection, url_validator, url_normalizer)
+checks = UrlChecks(db_connection)
 
 
 @app.route('/')
@@ -114,11 +116,13 @@ def run_checks(id):
         flash('Некорректный URL', 'danger')
         return redirect(url_for('show_urls'))
     try:
-        data = check_page(url.name)
+
+        data = checks.check_page(url.name)
+
     except PageCheckError as e:
         flash(str(e), 'danger')
         return redirect(url_for('get_url', id=id))
 
-    repo.save_checks(id, data)
+    checks.save_checks(id, data)
     flash('Страница успешно проверена', 'success')
     return redirect(url_for('get_url', id=id))
